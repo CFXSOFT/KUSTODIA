@@ -3,3 +3,6 @@ npm run dev
 
 NEXT_PUBLIC_SUPABASE_URL=https://tlcuqxzmkhkcoumhxfcf.supabase.co
 NEXT_PUBLIC_SUPABASE_ANON_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InRsY3VxeHpta2hrY291bWh4ZmNmIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTAzMDE3NTQsImV4cCI6MjEwNTg3Nzc1NH0.j5gMPdrw3rBanwVnFD6J5c_h8YAULX3L8zdCYjzZ2zU
+
+guardado:
+hoy: 30/09/2026
