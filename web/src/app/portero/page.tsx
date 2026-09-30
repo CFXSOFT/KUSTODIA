@@ -2,13 +2,24 @@
 
 import { useState, useRef, useEffect, useCallback } from 'react'
 import jsQR from 'jsqr'
+import { createClient } from '@/lib/supabase/client'
 
 type TipoRegistro = 'entrada' | 'salida'
 
+interface Estudiante {
+  id: string
+  nombre_completo: string
+  cedula: string
+  nivel: string
+  grado: string
+  seccion: string
+}
+
 interface Resultado {
   tipo: TipoRegistro
-  codigo: string
   hora: string
+  estudiante?: Estudiante
+  error?: string
 }
 
 export default function PorteroPage() {
@@ -18,13 +29,21 @@ export default function PorteroPage() {
   const [dispositivoId, setDispositivoId] = useState<string>('')
   const [autoCierre, setAutoCierre] = useState(true)
   const [resultado, setResultado] = useState<Resultado | null>(null)
+  const [procesando, setProcesando] = useState(false)
 
   const videoRef = useRef<HTMLVideoElement>(null)
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const streamRef = useRef<MediaStream | null>(null)
   const animationRef = useRef<number | null>(null)
+  const procesandoRef = useRef(false)
+  const tipoRegistroRef = useRef<TipoRegistro>('entrada')
 
-  // Lista las cámaras disponibles apenas carga la página
+  const supabase = createClient()
+
+  useEffect(() => {
+    tipoRegistroRef.current = tipoRegistro
+  }, [tipoRegistro])
+
   useEffect(() => {
     navigator.mediaDevices.enumerateDevices().then((lista) => {
       const camaras = lista.filter((d) => d.kind === 'videoinput')
@@ -39,6 +58,47 @@ export default function PorteroPage() {
     streamRef.current = null
     setCamaraEncendida(false)
   }, [])
+
+  async function procesarCodigo(codigoQr: string) {
+    if (procesandoRef.current) return
+    procesandoRef.current = true
+    setProcesando(true)
+
+    const { data: estudiante } = await supabase
+      .from('estudiantes')
+      .select('id, nombre_completo, cedula, nivel, grado, seccion')
+      .eq('codigo_qr', codigoQr)
+      .single()
+
+    if (!estudiante) {
+      setResultado({
+        tipo: tipoRegistroRef.current,
+        hora: new Date().toLocaleString('es-PE'),
+        error: 'Código QR no reconocido. Verifica con Secretaría.',
+      })
+      procesandoRef.current = false
+      setProcesando(false)
+      return
+    }
+
+    const {
+      data: { user },
+    } = await supabase.auth.getUser()
+
+    await supabase.from('asistencias').insert({
+      estudiante_id: estudiante.id,
+      tipo: tipoRegistroRef.current,
+      registrado_por: user?.id,
+    })
+
+    setResultado({
+      tipo: tipoRegistroRef.current,
+      hora: new Date().toLocaleString('es-PE'),
+      estudiante,
+    })
+    procesandoRef.current = false
+    setProcesando(false)
+  }
 
   const escanear = useCallback(() => {
     const video = videoRef.current
@@ -57,17 +117,13 @@ export default function PorteroPage() {
     const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height)
     const codigo = jsQR(imageData.data, imageData.width, imageData.height)
 
-    if (codigo) {
-      setResultado({
-        tipo: tipoRegistro,
-        codigo: codigo.data,
-        hora: new Date().toLocaleString('es-PE'),
-      })
-      return // pausa el escaneo mientras se muestra la confirmación
+    if (codigo && !procesandoRef.current) {
+      procesarCodigo(codigo.data)
+      return // pausa el escaneo mientras se procesa/muestra la confirmación
     }
 
     animationRef.current = requestAnimationFrame(escanear)
-  }, [tipoRegistro])
+  }, [])
 
   const encenderCamara = useCallback(async () => {
     try {
@@ -81,12 +137,11 @@ export default function PorteroPage() {
       }
       setCamaraEncendida(true)
       animationRef.current = requestAnimationFrame(escanear)
-    } catch (err) {
+    } catch {
       alert('No se pudo acceder a la cámara. Revisa los permisos del navegador.')
     }
   }, [dispositivoId, escanear])
 
-  // Si ya hay un resultado mostrado, no seguir escaneando
   useEffect(() => {
     if (resultado && animationRef.current) {
       cancelAnimationFrame(animationRef.current)
@@ -100,7 +155,6 @@ export default function PorteroPage() {
     }
   }
 
-  // Auto-cierre: cierra la tarjeta sola después de 3 segundos
   useEffect(() => {
     if (resultado && autoCierre) {
       const timeout = setTimeout(cerrarConfirmacion, 3000)
@@ -118,16 +172,13 @@ export default function PorteroPage() {
           ← regresar
         </button>
         <div className="text-right">
-          <h1 className="text-sm font-bold text-gray-800">
-            CAMARA REGISTRO
-          </h1>
+          <h1 className="text-sm font-bold text-gray-800">CAMARA REGISTRO</h1>
           <p className="text-xs text-gray-500">
             acceso: <span className="italic">PORTERO</span>
           </p>
         </div>
       </div>
 
-      {/* Vista de cámara */}
       <div className="relative mb-3 aspect-square w-full overflow-hidden rounded-lg bg-black">
         <video
           ref={videoRef}
@@ -141,6 +192,11 @@ export default function PorteroPage() {
             <div className="h-3/4 w-3/4 rounded-lg border-2 border-white/60" />
           </div>
         )}
+        {procesando && (
+          <div className="absolute inset-0 flex items-center justify-center bg-black/50 text-sm text-white">
+            Verificando...
+          </div>
+        )}
       </div>
 
       <button
@@ -150,10 +206,7 @@ export default function PorteroPage() {
         {camaraEncendida ? 'APAGAR' : 'ENCENDER'}
       </button>
 
-      {/* Tipo de registro */}
-      <p className="mb-2 text-sm font-medium text-gray-700">
-        Tipo de REGISTRO
-      </p>
+      <p className="mb-2 text-sm font-medium text-gray-700">Tipo de REGISTRO</p>
       <div className="mb-6 flex gap-3">
         <button
           onClick={() => setTipoRegistro('entrada')}
@@ -177,10 +230,7 @@ export default function PorteroPage() {
         </button>
       </div>
 
-      {/* Selección de cámara */}
-      <p className="mb-2 text-sm font-medium text-gray-700">
-        Seleccionar Cámara
-      </p>
+      <p className="mb-2 text-sm font-medium text-gray-700">Seleccionar Cámara</p>
       <select
         value={dispositivoId}
         onChange={(e) => setDispositivoId(e.target.value)}
@@ -193,7 +243,6 @@ export default function PorteroPage() {
         ))}
       </select>
 
-      {/* Auto cierre */}
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2">
           <button
@@ -215,26 +264,53 @@ export default function PorteroPage() {
         </p>
       </div>
 
-      {/* Tarjeta de confirmación */}
       {resultado && (
         <div className="fixed inset-0 flex items-center justify-center bg-black/50 p-4">
           <div className="w-full max-w-sm rounded-lg bg-white p-6 text-center">
-            <div className="mx-auto mb-3 flex h-12 w-12 items-center justify-center rounded-full bg-green-100">
-              <span className="text-2xl text-green-600">✓</span>
-            </div>
-            <h3 className="mb-4 text-lg font-bold text-green-600">
-              {resultado.tipo.toUpperCase()} registrada
-            </h3>
-            <div className="space-y-2 text-left text-sm">
-              <div className="flex justify-between">
-                <span className="text-gray-500">Código leído</span>
-                <span className="font-medium">{resultado.codigo}</span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-gray-500">Fecha - hora</span>
-                <span className="font-medium">{resultado.hora}</span>
-              </div>
-            </div>
+            {resultado.error ? (
+              <>
+                <div className="mx-auto mb-3 flex h-12 w-12 items-center justify-center rounded-full bg-red-100">
+                  <span className="text-2xl text-red-600">✕</span>
+                </div>
+                <h3 className="mb-4 text-lg font-bold text-red-600">
+                  No reconocido
+                </h3>
+                <p className="text-sm text-gray-600">{resultado.error}</p>
+              </>
+            ) : (
+              <>
+                <div className="mx-auto mb-3 flex h-12 w-12 items-center justify-center rounded-full bg-green-100">
+                  <span className="text-2xl text-green-600">✓</span>
+                </div>
+                <h3 className="mb-4 text-lg font-bold text-green-600">
+                  {resultado.tipo.toUpperCase()} registrada
+                </h3>
+                <div className="space-y-2 text-left text-sm">
+                  <div className="flex justify-between">
+                    <span className="text-gray-500">Alumno</span>
+                    <span className="font-medium">
+                      {resultado.estudiante?.nombre_completo}
+                    </span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-gray-500">Nivel</span>
+                    <span className="font-medium">
+                      {resultado.estudiante?.nivel}
+                    </span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-gray-500">Grado</span>
+                    <span className="font-medium">
+                      {resultado.estudiante?.grado} - {resultado.estudiante?.seccion}
+                    </span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-gray-500">Fecha - hora</span>
+                    <span className="font-medium">{resultado.hora}</span>
+                  </div>
+                </div>
+              </>
+            )}
             <button
               onClick={cerrarConfirmacion}
               className="mt-6 w-full rounded bg-gray-700 py-2 text-sm text-white"

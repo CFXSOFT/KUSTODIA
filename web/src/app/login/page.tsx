@@ -10,6 +10,7 @@ export default function LoginPage() {
   const [password, setPassword] = useState('')
   const [error, setError] = useState<string | null>(null)
   const [loading, setLoading] = useState(false)
+  const [mostrarPassword, setMostrarPassword] = useState(false)
   const router = useRouter()
 
   async function handleLogin(e: React.FormEvent) {
@@ -61,7 +62,7 @@ export default function LoginPage() {
       {/* Panel izquierdo con imagen */}
       <div className="relative h-56 w-full md:h-auto md:w-1/2">
         <Image
-          src="/crystal.jpg"
+          src="/crystal.png"
           alt="Kustodia"
           fill
           className="object-cover object-top"
@@ -128,15 +129,21 @@ export default function LoginPage() {
                 Contraseña
               </label>
               <input
-                type="password"
+                type={mostrarPassword ? 'text' : 'password'}
                 required
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 className="w-full rounded border border-gray-300 px-3 py-2 text-[0.781rem] md:text-[0.684rem]"
               />
-              <p className="mb-6 mt-1 text-[0.684rem] font-normal text-gray-500 md:text-[0.586rem]">
-                Esta seccion es obligatoria
-              </p>
+              <label className="mb-6 mt-1 flex items-center gap-2 text-[0.684rem] font-normal text-gray-500 md:text-[0.586rem]">
+                <input
+                  type="checkbox"
+                  checked={mostrarPassword}
+                  onChange={(e) => setMostrarPassword(e.target.checked)}
+                  className="h-3 w-3"
+                />
+                Mostrar contraseña
+              </label>
 
               {error && (
                 <p className="mb-4 text-[0.684rem] text-red-600 md:text-[0.586rem]">
