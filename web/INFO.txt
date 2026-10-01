@@ -11,6 +11,11 @@ cd KUSTODIA
 cd web
 npm install
 
+cd C:\Users\josue\Desktop\KUSTODIA
+git add .
+git commit -m "Agrega seccion Personal con creacion de cuentas, corrige server.ts y politicas RLS"
+git push origin main
+
 guardado:
 hoy: 30/09/2026
 
