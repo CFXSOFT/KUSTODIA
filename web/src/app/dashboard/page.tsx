@@ -3,6 +3,7 @@
 import { useState } from 'react'
 import EstudiantesSection from './EstudiantesSection'
 import ResumenEstudiantesSection from './ResumenEstudiantesSection'
+import PersonalSection from './PersonalSection'
 
 const menuItems = [
   {
@@ -11,7 +12,6 @@ const menuItems = [
   },
   { grupo: 'Registro Académico', items: [] },
   { grupo: 'Horarios y Clases', items: [] },
-  { grupo: 'Gestión de Personal', items: [] },
   { grupo: 'Configuración', items: [] },
 ]
 
@@ -121,6 +121,8 @@ export default function DashboardPage() {
           <EstudiantesSection />
         ) : seccionActiva === 'Resumen Estudiantes' ? (
           <ResumenEstudiantesSection />
+        ) : seccionActiva === 'Personal' ? (
+          <PersonalSection />
         ) : (
           <div className="rounded-lg border border-gray-200 bg-white p-8 text-center text-sm text-gray-400">
             Aquí va el contenido de &ldquo;{seccionActiva}&rdquo; — lo construimos en el siguiente paso.
