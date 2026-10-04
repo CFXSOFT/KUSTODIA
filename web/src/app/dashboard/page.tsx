@@ -5,6 +5,7 @@ import EstudiantesSection from './EstudiantesSection'
 import ResumenEstudiantesSection from './ResumenEstudiantesSection'
 import PersonalSection from './PersonalSection'
 import RegistroAcademicoSection from './RegistroAcademicoSection'
+import HorariosClasesSection from './HorariosClasesSection'
 
 const menuItems = [
   {
@@ -12,7 +13,7 @@ const menuItems = [
     items: ['Estudiantes', 'Resumen Estudiantes', 'Personal', 'Resumen Personal'],
   },
   { grupo: 'Registro Académico', items: ['Grados y Secciones'] },
-  { grupo: 'Horarios y Clases', items: [] },
+  { grupo: 'Horarios y Clases', items: ['Áreas y Horarios'] },
   { grupo: 'Configuración', items: [] },
 ]
 
@@ -45,14 +46,11 @@ export default function DashboardPage() {
           <div key={grupo.grupo} className="mb-1">
             <button
               onClick={() =>
-                setGrupoAbierto(
-                  grupoAbierto === grupo.grupo ? '' : grupo.grupo
-                )
+                setGrupoAbierto(grupoAbierto === grupo.grupo ? '' : grupo.grupo)
               }
               className="flex w-full items-center justify-between rounded px-3 py-2 text-left text-sm font-medium text-gray-700 hover:bg-gray-100"
             >
               {grupo.grupo}
-
               {grupo.items.length > 0 && (
                 <span className="text-xs text-gray-400">
                   {grupoAbierto === grupo.grupo ? '▾' : '▸'}
@@ -101,7 +99,6 @@ export default function DashboardPage() {
             className="absolute inset-0 bg-black/40"
             onClick={() => setMenuMovilAbierto(false)}
           />
-
           <aside className="absolute left-0 top-0 flex h-full w-64 flex-col bg-white">
             {contenidoMenu}
           </aside>
@@ -116,8 +113,7 @@ export default function DashboardPage() {
             className="rounded border border-gray-300 p-2 text-gray-600 md:hidden"
           >
             ☰
-          </button>
-
+          </button>ss
           <h1 className="text-xl font-semibold text-gray-800">
             {seccionActiva}
           </h1>
@@ -131,6 +127,8 @@ export default function DashboardPage() {
           <PersonalSection />
         ) : seccionActiva === 'Grados y Secciones' ? (
           <RegistroAcademicoSection />
+        ) : seccionActiva === 'Áreas y Horarios' ? (
+          <HorariosClasesSection />
         ) : (
           <div className="rounded-lg border border-gray-200 bg-white p-8 text-center text-sm text-gray-400">
             Aquí va el contenido de &ldquo;{seccionActiva}&rdquo; — lo construimos en el siguiente paso.
